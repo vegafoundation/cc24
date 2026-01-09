@@ -6,7 +6,7 @@ import Services from '@/components/sections/Services'
 import Financing from '@/components/sections/Financing'
 import TrustSignals from '@/components/sections/TrustSignals'
 import Contact from '@/components/sections/Contact'
-import { generateMetadata } from '../metadata'
+import { generateMetadata as getMetadata } from '../metadata'
 
 type Props = {
   params: {
@@ -17,7 +17,7 @@ type Props = {
 export async function generateMetadata(props: Props) {
   const domain = props.params?.domain || 'local'
   const domainType = domain === 'online' ? 'online' : domain === 'vip' ? 'vip' : 'local'
-  return generateMetadata(domainType)
+  return getMetadata(domainType)
 }
 
 export default function DomainPage({ params }: Props) {
