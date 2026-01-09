@@ -1,16 +1,14 @@
 {
-  "name": "carcompany24-website",
+  "name": "cc24-demo",
   "version": "1.0.0",
   "private": true,
-  "description": "CarCompany24 GmbH - Professionelle Autohändler-Website mit 360° Showroom",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:pages": "NEXT_PUBLIC_BASE_PATH=/CC24 next build",
+    "build:static": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit",
-    "export": "next build && next export"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "next": "^14.2.0",
@@ -31,8 +29,8 @@
     "@uppy/dashboard": "^3.4.0",
     "@uppy/tus": "^3.1.0",
     "sharp": "^0.33.0",
-    "date-fns": "^3.3.0",
-    "react-intersection-observer": "^9.5.0"
+    "js-cloudimage-360-view": "^2.0.0",
+    "react-intersection-observer": "^9.5.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

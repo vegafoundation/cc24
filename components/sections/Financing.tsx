@@ -1,113 +1,92 @@
 'use client'
 
-import Link from 'next/link'
-import { Calculator, Shield, CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
-import ScrollReveal from '@/components/animations/ScrollReveal'
-import ParticleBackground from '@/components/animations/ParticleBackground'
+import Link from 'next/link'
 
 export default function Financing() {
   return (
-    <section className="py-20 bg-gradient-to-br from-primary-500 to-primary-600 text-white relative overflow-hidden">
-      {/* Subtle particles */}
-      <ParticleBackground
-        particleCount={40}
-        speed={0.2}
-        color="#FFFFFF"
-        opacity={0.15}
-      />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="max-w-4xl mx-auto">
-          <ScrollReveal direction="up" delay={0} duration={0.6}>
-            <div className="text-center mb-12">
-              <motion.h2
-                className="text-4xl font-bold mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                Finanzierung trotz Schufa
-              </motion.h2>
-              <motion.p
-                className="text-xl opacity-90"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                Individuelle Lösungen für jeden - auch bei negativer Bonität
-              </motion.p>
-            </div>
-          </ScrollReveal>
+    <section className="py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl font-display font-bold mb-6 bg-gradient-to-r from-vega-cyan to-vega-emerald bg-clip-text text-transparent">
+              Individuelle Finanzierung
+            </h2>
+            <p className="text-gray-300 text-lg mb-6">
+              Wir bieten Ihnen flexible Finanzierungsmöglichkeiten mit transparenten Konditionen. 
+              Berechnen Sie jetzt Ihre monatliche Rate.
+            </p>
+            <ul className="space-y-3 text-gray-300 mb-8">
+              <li className="flex items-center">
+                <span className="text-vega-cyan mr-2">✓</span>
+                Zinsen ab 2,9% effektiv
+              </li>
+              <li className="flex items-center">
+                <span className="text-vega-cyan mr-2">✓</span>
+                Laufzeiten von 12-84 Monaten
+              </li>
+              <li className="flex items-center">
+                <span className="text-vega-cyan mr-2">✓</span>
+                Schnelle Entscheidung in 24h
+              </li>
+              <li className="flex items-center">
+                <span className="text-vega-cyan mr-2">✓</span>
+                PAngV-konforme Darstellung
+              </li>
+            </ul>
+            <Link
+              href="/finanzierung"
+              className="inline-block px-8 py-4 bg-vega-cyan text-gray-900 font-semibold rounded-lg hover:bg-vega-cyan/80 transition transform hover:scale-105"
+            >
+              Finanzierung berechnen
+            </Link>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {[
-              {
-                icon: Shield,
-                title: 'PAngV-konform',
-                description: 'Vollständig transparente Finanzierungsangebote gemäß Preisangabenverordnung',
-                delay: 0.1,
-              },
-              {
-                icon: CheckCircle,
-                title: 'Schnelle Entscheidung',
-                description: 'Unverbindliche Finanzierungsanfrage - Antwort innerhalb von 4 Stunden',
-                delay: 0.2,
-              },
-              {
-                icon: Calculator,
-                title: 'Online-Rechner',
-                description: 'Berechnen Sie Ihre monatliche Rate direkt online',
-                delay: 0.3,
-              },
-            ].map((feature, index) => {
-              const Icon = feature.icon
-              return (
-                <ScrollReveal
-                  key={index}
-                  direction="up"
-                  delay={feature.delay}
-                  duration={0.5}
-                >
-                  <motion.div
-                    className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20"
-                    whileHover={{ scale: 1.05, y: -5 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
-                  >
-                    <motion.div
-                      whileHover={{ rotate: 360 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <Icon className="w-8 h-8 mb-4" />
-                    </motion.div>
-                    <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                    <p className="opacity-90 text-sm">{feature.description}</p>
-                  </motion.div>
-                </ScrollReveal>
-              )
-            })}
-          </div>
-
-          <ScrollReveal direction="up" delay={0.4} duration={0.5}>
-            <div className="text-center">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link
-                  href="/finanzierung"
-                  className="inline-flex items-center gap-2 bg-white text-primary-500 hover:bg-gray-100 font-semibold px-8 py-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  Finanzierung berechnen
-                  <motion.div
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <Calculator className="w-5 h-5" />
-                  </motion.div>
-                </Link>
-              </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="bg-gray-800 p-8 rounded-lg border border-vega-cyan/20"
+          >
+            <h3 className="text-2xl font-semibold text-white mb-6">
+              Finanzierungsrechner
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-300 mb-2">Fahrzeugpreis</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  placeholder="25.000 €"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 mb-2">Anzahlung</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  placeholder="5.000 €"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 mb-2">Laufzeit</label>
+                <select className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white">
+                  <option>36 Monate</option>
+                  <option>48 Monate</option>
+                  <option>60 Monate</option>
+                  <option>72 Monate</option>
+                </select>
+              </div>
+              <div className="pt-4 border-t border-gray-700">
+                <p className="text-gray-300 mb-2">Geschätzte monatliche Rate:</p>
+                <p className="text-3xl font-bold text-vega-cyan">ca. 450 €</p>
+              </div>
             </div>
-          </ScrollReveal>
+          </motion.div>
         </div>
       </div>
     </section>

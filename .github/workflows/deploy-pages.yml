@@ -27,17 +27,24 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci --prefer-offline --no-audit
+          else
+            npm install --no-audit
+          fi
 
-      - name: Build
-        run: npm run build
+      - name: Build for GitHub Pages
+        run: npm run build:static
         env:
-          NEXT_PUBLIC_DOMAIN: ${{ secrets.NEXT_PUBLIC_DOMAIN || 'local' }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || '' }}
-          NEXT_PUBLIC_GA_ID_ONLINE: ${{ secrets.NEXT_PUBLIC_GA_ID_ONLINE || '' }}
-          NEXT_PUBLIC_GA_ID_VIP: ${{ secrets.NEXT_PUBLIC_GA_ID_VIP || '' }}
+          NEXT_PUBLIC_DOMAIN: online
+          NEXT_PUBLIC_API_URL: https://cc24-api.vercel.app
+          NEXT_PUBLIC_STATIC_EXPORT: "true"
+          NEXT_PUBLIC_BASE_PATH: ""
+          NODE_ENV: production
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -46,6 +53,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './out'
+          retention-days: 1
 
   deploy:
     environment:

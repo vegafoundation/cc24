@@ -43,10 +43,7 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
     return (
       <div className="min-h-screen pt-20 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <div className="w-16 h-16 border-4 border-vega-cyan border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-gray-400 text-lg">Lade Fahrzeugdetails von Mobile.de...</p>
-          </div>
+          <div className="text-center text-gray-400 py-20">Lade Fahrzeugdetails...</div>
         </div>
       </div>
     )
@@ -210,38 +207,24 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
             )}
 
             <div className="space-y-3">
-              <div className="flex gap-4">
-                <Link
-                  href={`/vavsr?vehicleId=${vehicle.id}`}
-                  className="flex-1 text-center px-6 py-3 bg-gradient-to-r from-vega-cyan to-vega-emerald text-gray-900 font-semibold rounded-lg hover:opacity-90 transition"
-                >
-                  🎥 360° Showroom öffnen
-                </Link>
-                <Link
-                  href="/finanzierung"
-                  className="flex-1 text-center px-6 py-3 bg-vega-cyan text-gray-900 font-semibold rounded-lg hover:bg-vega-cyan/80 transition"
-                >
-                  💰 Finanzierung berechnen
-                </Link>
-              </div>
-              <div className="flex gap-4">
-                <Link
-                  href="/#contact"
+            <div className="flex gap-4">
+              <Link
+                href="/finanzierung"
+                className="flex-1 text-center px-6 py-3 bg-vega-cyan text-gray-900 font-semibold rounded-lg hover:bg-vega-cyan/80 transition"
+              >
+                Finanzierung berechnen
+              </Link>
+              {vehicle.mobile_de_url && (
+                <a
+                  href={vehicle.mobile_de_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex-1 text-center px-6 py-3 border-2 border-vega-cyan text-vega-cyan font-semibold rounded-lg hover:bg-vega-cyan/10 transition"
                 >
-                  📧 Verkaufsanfrage senden
-                </Link>
-                {vehicle.mobile_de_url && (
-                  <a
-                    href={vehicle.mobile_de_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center px-6 py-3 border-2 border-gray-600 text-gray-300 font-semibold rounded-lg hover:border-gray-500 transition"
-                  >
-                    🔗 Mobile.de
-                  </a>
-                )}
-              </div>
+                  Auf Mobile.de ansehen
+                </a>
+              )}
+            </div>
             </div>
           </div>
         </div>

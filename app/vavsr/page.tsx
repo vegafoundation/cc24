@@ -7,9 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function VAVSRPage() {
-  return (
-    <div className="min-h-screen bg-gray-900">
-      <VAVSRShowroom />
-    </div>
-  )
+  return <VAVSRShowroom />
 }

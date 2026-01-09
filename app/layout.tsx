@@ -1,28 +1,16 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Orbitron } from 'next/font/google'
 import './globals.css'
 import Navigation from '@/components/layout/Navigation'
 import Footer from '@/components/layout/Footer'
-import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
-import QuickContact from '@/components/demo/QuickContact'
-import { generateMetadata as getMetadata } from './metadata'
-import { headers } from 'next/headers'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron' })
 
-export async function generateMetadata(): Promise<Metadata> {
-  // Domain aus Headers erkennen
-  const headersList = await headers()
-  const hostname = headersList.get('host') || ''
-  
-  let domainType: 'online' | 'vip' | 'local' = 'local'
-  if (hostname.includes('cc24.online')) {
-    domainType = 'online'
-  } else if (hostname.includes('cc24.vip')) {
-    domainType = 'vip'
-  }
-  
-  return getMetadata(domainType)
+export const metadata: Metadata = {
+  title: 'CarCompany24 - Premium Gebrauchtwagen & Finanzierung',
+  description: 'Professioneller Gebrauchtwagenhandel mit integrierter Finanzierung. Premium Fahrzeuge, faire Preise, transparente Konditionen.',
+  keywords: ['Gebrauchtwagen', 'Finanzierung', 'Auto', 'Kfz', 'CarCompany24'],
 }
 
 export default function RootLayout({
@@ -31,15 +19,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="de">
-      <head>
-        <GoogleAnalytics />
-      </head>
-      <body className={inter.className}>
+    <html lang="de" className={`${inter.variable} ${orbitron.variable}`}>
+      <body className="min-h-screen bg-gray-900 text-white">
         <Navigation />
-        {children}
+        <main className="flex-1">
+          {children}
+        </main>
         <Footer />
-        <QuickContact />
       </body>
     </html>
   )

@@ -1,114 +1,27 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: cc24-postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-cc24_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cc24_password}
-      POSTGRES_DB: ${POSTGRES_DB:-cc24_db}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./toolsets/cc24-database-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cc24_user}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: cc24-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Backend API (FastAPI)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: cc24-backend
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-cc24_user}:${POSTGRES_PASSWORD:-cc24_password}@postgres:5432/${POSTGRES_DB:-cc24_db}
-      - REDIS_URL=redis://redis:6379
-      - ML_WORKER_URL=http://ml-worker:8001
-      - UPLOAD_DIR=/app/uploads
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-    volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/data:/app/data
-      - ./processed:/app/processed
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      ml-worker:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # ML Worker (Background Removal)
-  ml-worker:
-    build:
-      context: ./integrations/showroom-beta/cc24-fullstack
-      dockerfile: docker/Dockerfile.ml-worker
-    container_name: cc24-ml-worker
-    ports:
-      - "8001:8001"
-    environment:
-      - PROCESSED_DIR=/app/processed
-    volumes:
-      - ./processed:/app/processed
-      - ./uploads:/app/uploads
-    command: python ml-worker/app.py
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Frontend (Next.js)
-  frontend:
+  cc24-demo:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cc24-frontend
+      args:
+        NEXT_PUBLIC_DOMAIN: ${NEXT_PUBLIC_DOMAIN:-online}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://cc24-api.vercel.app}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        DOCKER_BUILD: "true"
+    container_name: cc24-demo
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NODE_ENV=${NODE_ENV:-development}
-    depends_on:
-      - backend
-    volumes:
-      - ./public/uploads:/app/public/uploads
-      - ./public/images:/app/public/images
+      - NODE_ENV=production
+      - NEXT_PUBLIC_DOMAIN=${NEXT_PUBLIC_DOMAIN:-online}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://cc24-api.vercel.app}
+      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-}
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-volumes:
-  postgres-data:
-    driver: local
-  redis-data:
-    driver: local
+      start_period: 40s

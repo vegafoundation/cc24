@@ -1,7 +1,30 @@
 'use client'
 
-import CarCompany24Platform from '@/components/CarCompany24Platform'
+import { motion } from 'framer-motion'
+import Hero from '@/components/sections/Hero'
+import TrustSignals from '@/components/sections/TrustSignals'
+import VehicleShowcase from '@/components/sections/VehicleShowcase'
+import Services from '@/components/sections/Services'
+import Financing from '@/components/sections/Financing'
+import Contact from '@/components/sections/Contact'
+import ParticleBackground from '@/components/animations/ParticleBackground'
 
 export default function Home() {
-  return <CarCompany24Platform />
+  return (
+    <div className="relative min-h-screen">
+      <ParticleBackground />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Hero />
+        <TrustSignals />
+        <VehicleShowcase />
+        <Services />
+        <Financing />
+        <Contact />
+      </motion.div>
+    </div>
+  )
 }
