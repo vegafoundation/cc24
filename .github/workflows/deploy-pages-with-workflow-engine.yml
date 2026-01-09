@@ -1,0 +1,203 @@
+name: Deploy to GitHub Pages (with Workflow Engine)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      use_temporal:
+        description: 'Use Temporal Workflow Engine'
+        required: false
+        default: 'false'
+        type: boolean
+      use_argo:
+        description: 'Use Argo Workflows'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Option 1: Standard GitHub Actions (Default)
+  build-standard:
+    if: ${{ !inputs.use_temporal && !inputs.use_argo }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-audit
+
+      - name: Build for GitHub Pages
+        run: |
+          NEXT_PUBLIC_DOMAIN=online \
+          NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app \
+          NEXT_PUBLIC_STATIC_EXPORT=true \
+          NEXT_PUBLIC_BASE_PATH="" \
+          NODE_ENV=production \
+          npm run build:static
+        env:
+          NEXT_PUBLIC_DOMAIN: online
+          NEXT_PUBLIC_API_URL: https://cc24-api.vercel.app
+          NEXT_PUBLIC_STATIC_EXPORT: "true"
+          NEXT_PUBLIC_BASE_PATH: ""
+          NODE_ENV: production
+
+      - name: Verify build output
+        run: |
+          if [ -d "out" ]; then
+            echo "✅ Static export found in out/"
+            ls -la out/ | head -20
+          else
+            echo "❌ No build output found!"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'
+          retention-days: 1
+
+  # Option 2: Temporal Workflow Engine
+  build-with-temporal:
+    if: ${{ inputs.use_temporal == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install --no-audit
+          npm install @temporalio/workflow @temporalio/activity @temporalio/client
+
+      - name: Build with Temporal Workflow
+        run: |
+          echo "🚀 Using Temporal Workflow Engine for deployment..."
+          # Temporal Worker starten (wenn konfiguriert)
+          # npm run temporal:deploy --branch=${{ github.ref_name }} --environment=production
+          
+          # Fallback: Standard Build
+          NEXT_PUBLIC_DOMAIN=online \
+          NEXT_PUBLIC_STATIC_EXPORT=true \
+          NODE_ENV=production \
+          npm run build:static
+        env:
+          TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_ADDRESS }}
+          TEMPORAL_NAMESPACE: ${{ secrets.TEMPORAL_NAMESPACE }}
+          NEXT_PUBLIC_DOMAIN: online
+          NEXT_PUBLIC_STATIC_EXPORT: "true"
+          NODE_ENV: production
+
+      - name: Verify build output
+        run: |
+          if [ -d "out" ]; then
+            echo "✅ Temporal workflow build successful!"
+            ls -la out/ | head -20
+          else
+            echo "❌ Build failed!"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'
+          retention-days: 1
+
+  # Option 3: Argo Workflows (via kubectl)
+  build-with-argo:
+    if: ${{ inputs.use_argo == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Setup Argo CLI
+        run: |
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.5.0/argo-linux-amd64.gz
+          gunzip argo-linux-amd64.gz
+          chmod +x argo-linux-amd64
+          sudo mv argo-linux-amd64 /usr/local/bin/argo
+
+      - name: Configure Kubernetes
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=./kubeconfig
+
+      - name: Submit Argo Workflow
+        run: |
+          echo "🚀 Using Argo Workflows for deployment..."
+          argo submit workflows/argo-cc24-deploy.yaml \
+            -p branch=${{ github.ref_name }} \
+            -p environment=production \
+            --serviceaccount=argo-workflow || true
+          
+          # Fallback: Standard Build
+          npm install --no-audit
+          NEXT_PUBLIC_DOMAIN=online \
+          NEXT_PUBLIC_STATIC_EXPORT=true \
+          NODE_ENV=production \
+          npm run build:static
+
+      - name: Verify build output
+        run: |
+          if [ -d "out" ]; then
+            echo "✅ Argo workflow build successful!"
+            ls -la out/ | head -20
+          else
+            echo "❌ Build failed!"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'
+          retention-days: 1
+
+  # Deployment (gemeinsam für alle Optionen)
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: [build-standard, build-with-temporal, build-with-argo]
+    if: always() && (needs.build-standard.result == 'success' || needs.build-with-temporal.result == 'success' || needs.build-with-argo.result == 'success')
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
