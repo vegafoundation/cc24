@@ -86,35 +86,52 @@ jobs:
           fi
           echo "✅ All required secrets are configured"
 
-      - name: Deploy to Vercel with retry
+      - name: Deploy to Vercel
         id: deploy
-        uses: nick-fields/retry@v3.0.0
-        with:
-          timeout_minutes: 15
-          max_attempts: 3
-          retry_on: error
-          command: |
-            DEPLOY_OUTPUT=$(vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes 2>&1)
-            echo "$DEPLOY_OUTPUT"
-            DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | tail -1)
-            echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-            echo "✅ Deployed to: $DEPLOY_URL"
+        run: |
+          DEPLOY_OUTPUT=$(vercel --prod --token "$VERCEL_TOKEN" --yes 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | tail -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: $DEPLOY_URL"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Retry Vercel deployment if failed
+        if: failure() && steps.deploy.outcome == 'failure'
+        id: deploy-retry
+        run: |
+          echo "Retrying Vercel deployment..."
+          sleep 10
+          DEPLOY_OUTPUT=$(vercel --prod --token "$VERCEL_TOKEN" --yes 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | tail -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: $DEPLOY_URL"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Verify deployment
         if: success()
         run: |
-          if [ -n "${{ steps.deploy.outputs.url }}" ]; then
+          DEPLOY_URL="${{ steps.deploy.outputs.url }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            DEPLOY_URL="${{ steps.deploy-retry.outputs.url }}"
+          fi
+          
+          if [ -n "$DEPLOY_URL" ]; then
             echo "✅ Deployment successful"
-            echo "URL: ${{ steps.deploy.outputs.url }}"
+            echo "URL: $DEPLOY_URL"
             
             # Wait a bit for deployment to be fully ready
             sleep 10
             
             # Try to curl the deployment URL
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.deploy.outputs.url }}" || echo "000")
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" || echo "000")
             if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
               echo "✅ Deployment is accessible (HTTP $HTTP_STATUS)"
             else
@@ -127,11 +144,16 @@ jobs:
       - name: Generate deployment summary
         if: always()
         run: |
+          DEPLOY_URL="${{ steps.deploy.outputs.url }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            DEPLOY_URL="${{ steps.deploy-retry.outputs.url }}"
+          fi
+          
           echo "## Vercel Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ steps.deploy.outputs.url }}" ]; then
-            echo "- **URL**: ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "- **URL**: $DEPLOY_URL" >> $GITHUB_STEP_SUMMARY
           fi
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

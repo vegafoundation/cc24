@@ -92,16 +92,6 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5.0.0
 
-      - name: Upload artifact with retry
-        uses: nick-fields/retry@v3.0.0
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_on: error
-          command: |
-            # Use actions/upload-pages-artifact
-            echo "Uploading pages artifact..."
-
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3.0.1
         with:
@@ -129,17 +119,8 @@ jobs:
     needs: build
     
     steps:
-      - name: Deploy to GitHub Pages with retry
-        id: deployment
-        uses: nick-fields/retry@v3.0.0
-        with:
-          timeout_minutes: 8
-          max_attempts: 3
-          retry_on: error
-          command: |
-            echo "Deploying to GitHub Pages..."
-
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4.0.5
 
       - name: Verify deployment

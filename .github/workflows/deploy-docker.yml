@@ -61,29 +61,47 @@ jobs:
             org.opencontainers.image.description=Cloud Computing 2024 Demonstration Application
             org.opencontainers.image.vendor=Vega Foundation
 
-      - name: Build and push Docker image with retry
-        uses: nick-fields/retry@v3.0.0
+      - name: Build and push Docker image
+        id: docker-build
+        uses: docker/build-push-action@v6.10.0
         with:
-          timeout_minutes: 25
-          max_attempts: 2
-          retry_on: error
-          command: |
-            docker buildx build \
-              --context . \
-              --file ./Dockerfile \
-              --push \
-              --platform linux/amd64 \
-              --tag ${{ steps.meta.outputs.tags }} \
-              --label "${{ steps.meta.outputs.labels }}" \
-              --build-arg NEXT_PUBLIC_DOMAIN=online \
-              --build-arg NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app \
-              --build-arg NEXT_PUBLIC_BASE_PATH= \
-              --build-arg DOCKER_BUILD=true \
-              --build-arg BUILDKIT_INLINE_CACHE=1 \
-              --cache-from type=gha \
-              --cache-to type=gha,mode=max \
-              --provenance=false \
-              --sbom=false
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          build-args: |
+            NEXT_PUBLIC_DOMAIN=online
+            NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app
+            NEXT_PUBLIC_BASE_PATH=
+            DOCKER_BUILD=true
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
+
+      - name: Retry Docker build if failed
+        if: failure() && steps.docker-build.outcome == 'failure'
+        uses: docker/build-push-action@v6.10.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          build-args: |
+            NEXT_PUBLIC_DOMAIN=online
+            NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app
+            NEXT_PUBLIC_BASE_PATH=
+            DOCKER_BUILD=true
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
 
       - name: Verify image
         run: |
