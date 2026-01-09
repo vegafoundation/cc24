@@ -1,0 +1,181 @@
+# CC24 Fullstack Docker Deployment
+# Entwickelt basierend auf VEGA Enterprise Wisdom
+
+services:
+  # ============================================================================
+  # PostgreSQL Database
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: cc24-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cc24
+      POSTGRES_USER: ${POSTGRES_USER:-cc24_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cc24_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cc24_user} -d cc24"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cc24-network
+
+  # ============================================================================
+  # Redis Cache & Queue
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: cc24-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cc24-network
+
+  # ============================================================================
+  # Backend API (FastAPI)
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cc24-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-cc24_user}:${POSTGRES_PASSWORD:-cc24_password}@postgres:5432/cc24
+      - REDIS_URL=redis://redis:6379
+      - ML_WORKER_URL=http://ml-worker:8001
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cc24-network
+    volumes:
+      - uploads_data:/app/uploads
+
+  # ============================================================================
+  # ML Worker (Background Removal)
+  # ============================================================================
+  ml-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.ml
+    container_name: cc24-ml-worker
+    restart: unless-stopped
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - ALLOWED_ORIGINS=http://localhost:3000,http://frontend:3000,http://backend:8000
+      - ML_DEFAULT_MODEL=${ML_DEFAULT_MODEL:-u2net}
+    ports:
+      - "${ML_WORKER_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - cc24-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  # ============================================================================
+  # Frontend (Next.js)
+  # ============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_DOMAIN: ${NEXT_PUBLIC_DOMAIN:-online}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        DOCKER_BUILD: "true"
+    container_name: cc24-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_DOMAIN=${NEXT_PUBLIC_DOMAIN:-online}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cc24-network
+
+  # ============================================================================
+  # Nginx Reverse Proxy (Production)
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: cc24-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - cc24-network
+    profiles:
+      - production
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  cc24-network:
+    driver: bridge
+    name: cc24-network
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+    name: cc24-postgres-data
+  redis_data:
+    name: cc24-redis-data
+  uploads_data:
+    name: cc24-uploads-data
