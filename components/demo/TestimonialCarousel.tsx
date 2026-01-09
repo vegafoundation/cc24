@@ -91,7 +91,7 @@ export default function TestimonialCarousel() {
             >
               <Quote className="w-12 h-12 text-primary-500 mb-6" />
               <p className="text-lg text-gray-700 mb-6 italic">
-                "{testimonials[currentIndex].text}"
+                &quot;{testimonials[currentIndex].text}&quot;
               </p>
               <div className="flex items-center justify-between">
                 <div>
