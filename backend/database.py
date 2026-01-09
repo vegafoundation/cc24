@@ -162,6 +162,7 @@ class Showroom(Base):
     background = Column(String(50), default="vavsr_cyan")
     frames = Column(Integer, default=36)
     images = Column(JSON, nullable=False)
+    images_360 = Column(JSON)  # 360° processed images
     
     # Processing Status
     status = Column(String(50), default="processing")
@@ -222,3 +223,19 @@ def get_db():
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
+
+
+def calculate_vega_commission(amount: float, profit_margin: float = 30.0) -> tuple:
+    """
+    Berechnet VEGA Commission (13.58%)
+    
+    Args:
+        amount: Der Umsatzbetrag
+        profit_margin: Die Gewinnmarge in Prozent (Standard: 30%)
+    
+    Returns:
+        tuple: (net_profit, vega_commission)
+    """
+    net_profit = amount * (profit_margin / 100)
+    vega_commission = net_profit * 0.1358  # 13.58%
+    return round(net_profit, 2), round(vega_commission, 2)
