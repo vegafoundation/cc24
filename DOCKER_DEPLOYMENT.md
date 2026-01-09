@@ -1,32 +1,73 @@
-# 🐳 Docker Deployment - GitHub Container Registry
+# 🐳 Docker Deployment - Multi-Registry Support
 
-## ✅ Fix: Docker Hub → GitHub Container Registry
+## 📦 Supported Registries
 
-**Problem:** Docker Hub Credentials fehlten  
-**Lösung:** Umstellung auf GitHub Container Registry (ghcr.io)
+The workflow supports pushing to:
+1. **GitHub Container Registry (ghcr.io)** - Default, no additional secrets needed
+2. **Docker Hub** - Optional, supports custom image names (e.g., `anlaetan/vega`)
 
-## 🔧 Änderungen
+---
 
-### Vorher (Docker Hub)
-```yaml
-- name: Login to Docker Hub
-  uses: docker/login-action@v3
-  with:
-    username: ${{ secrets.DOCKER_USERNAME }}
-    password: ${{ secrets.DOCKER_PASSWORD }}
+## 🚀 Docker Hub Push - Custom Image Names
+
+### Setup for Docker Hub (e.g., `anlaetan/vega:tagname`)
+
+To push to Docker Hub with a custom image name, configure these repository secrets:
+
+**Required Secrets (GitHub Settings → Secrets → Actions):**
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `DOCKERHUB_USERNAME` | Your Docker Hub username | `anlaetan` |
+| `DOCKERHUB_PASSWORD` | Docker Hub access token | `dckr_pat_xxx...` |
+| `DOCKERHUB_IMAGE` | Full image name (optional) | `anlaetan/vega` |
+
+### Option 1: Automatic Push (Recommended)
+
+After setting up secrets, the workflow automatically pushes on:
+- Push to `main` branch → `anlaetan/vega:main`, `anlaetan/vega:latest`
+- Push tag `v1.0.0` → `anlaetan/vega:1.0.0`
+
+### Option 2: Manual Push with Custom Tag
+
+1. Go to **Actions** → **Deploy to Docker (Multi-Registry)**
+2. Click **Run workflow**
+3. Enter:
+   - `dockerhub_image`: `anlaetan/vega`
+   - `tag`: `tagname` (your custom tag)
+4. Click **Run workflow**
+
+This will push: `docker push anlaetan/vega:tagname`
+
+### Pull the Image
+
+```bash
+# Pull latest
+docker pull anlaetan/vega:latest
+
+# Pull specific tag
+docker pull anlaetan/vega:tagname
+
+# Run container
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_DOMAIN=online \
+  -e NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app \
+  anlaetan/vega:tagname
 ```
 
-### Nachher (GitHub Container Registry)
-```yaml
-- name: Log in to GitHub Container Registry
-  uses: docker/login-action@v3
-  with:
-    registry: ghcr.io
-    username: ${{ github.actor }}
-    password: ${{ secrets.GITHUB_TOKEN }}
-```
+---
 
-## 📦 Image Details
+## 🔐 Getting Docker Hub Access Token
+
+1. Go to [Docker Hub](https://hub.docker.com) → Account Settings → Security
+2. Click **New Access Token**
+3. Name: `github-actions`
+4. Permissions: **Read, Write, Delete**
+5. Copy the token and save it as `DOCKERHUB_PASSWORD` secret
+
+---
+
+## 📋 GitHub Container Registry (Default)
 
 ### Registry
 - **Registry:** `ghcr.io`
@@ -38,8 +79,6 @@
 - `main-<sha>` - Specific commit
 - `v1.0.0` - Semantic version tags
 - `latest` - Latest stable (main branch)
-
-## 🚀 Verwendung
 
 ### Pull Image
 ```bash
@@ -68,7 +107,7 @@ services:
 
 ## 🔐 Authentication
 
-### GitHub Token
+### GitHub Token (GHCR)
 - Automatisch verfügbar via `GITHUB_TOKEN`
 - Keine zusätzlichen Secrets nötig
 - Berechtigung: `packages: write`
@@ -96,12 +135,13 @@ services:
 
 ## ✅ Status
 
-- ✅ Workflow umgestellt auf ghcr.io
-- ✅ GITHUB_TOKEN automatisch verfügbar
-- ✅ Keine zusätzlichen Secrets nötig
-- ✅ Build sollte jetzt erfolgreich sein
+- ✅ Workflow supports ghcr.io (default)
+- ✅ Workflow supports Docker Hub with custom image names
+- ✅ Manual workflow_dispatch with custom image and tag
+- ✅ GITHUB_TOKEN automatically available for GHCR
+- ✅ Docker Hub requires DOCKERHUB_USERNAME and DOCKERHUB_PASSWORD secrets
 
 ---
 
 **Letzte Aktualisierung:** 2026-01-09  
-**Status:** ✅ Fix implementiert
+**Status:** ✅ Multi-Registry support implemented

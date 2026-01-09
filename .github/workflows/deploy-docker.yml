@@ -7,6 +7,16 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      dockerhub_image:
+        description: 'Docker Hub image name (e.g., anlaetan/vega)'
+        required: false
+        type: string
+      tag:
+        description: 'Image tag (e.g., latest, v1.0.0)'
+        required: false
+        type: string
+        default: 'latest'
 
 permissions:
   contents: read
@@ -65,6 +75,10 @@ jobs:
           echo "Image: ghcr.io/${{ github.repository }}/cc24-demo:latest"
 
   # Docker Hub (Optional)
+  # Supports custom image names like anlaetan/vega via:
+  # - DOCKERHUB_IMAGE secret (e.g., anlaetan/vega)
+  # - Or workflow_dispatch input: dockerhub_image
+  # - Falls back to DOCKERHUB_USERNAME/cc24-demo
   deploy-dockerhub:
     if: ${{ secrets.DOCKERHUB_USERNAME != '' }}
     runs-on: ubuntu-latest
@@ -81,15 +95,30 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+      - name: Determine image name
+        id: image
+        run: |
+          # Priority: workflow input > DOCKERHUB_IMAGE secret > default
+          if [ -n "${{ inputs.dockerhub_image }}" ]; then
+            IMAGE_NAME="${{ inputs.dockerhub_image }}"
+          elif [ -n "${{ secrets.DOCKERHUB_IMAGE }}" ]; then
+            IMAGE_NAME="${{ secrets.DOCKERHUB_IMAGE }}"
+          else
+            IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/cc24-demo"
+          fi
+          echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "Using Docker Hub image: $IMAGE_NAME"
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/cc24-demo
+          images: ${{ steps.image.outputs.name }}
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') && inputs.tag == '' }}
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
       - name: Build and push to Docker Hub
         uses: docker/build-push-action@v5
@@ -110,4 +139,7 @@ jobs:
       - name: Deployment Status
         run: |
           echo "✅ Docker image pushed to Docker Hub!"
-          echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/cc24-demo:latest"
+          echo "Image: ${{ steps.image.outputs.name }}:${{ inputs.tag || 'latest' }}"
+          echo ""
+          echo "📦 Pull command:"
+          echo "docker pull ${{ steps.image.outputs.name }}:${{ inputs.tag || 'latest' }}"
