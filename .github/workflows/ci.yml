@@ -8,46 +8,110 @@ on:
     branches:
       - main
 
+# Explicit minimal permissions
+permissions:
+  contents: read
+
+# Ensure only one workflow runs at a time per PR/branch
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4.1.0
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci --prefer-offline --no-audit
-          else
-            npm install --no-audit
-          fi
+      - name: Restore npm cache
+        uses: actions/cache@v4.2.0
+        id: npm-cache
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            .next/cache
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-npm-
 
-      - name: Type Check
+      - name: Install dependencies with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            if [ -f "package-lock.json" ]; then
+              npm ci --prefer-offline --no-audit
+            else
+              npm install --no-audit --prefer-offline
+            fi
+
+      - name: Type check
+        id: type-check
         run: npm run type-check
+        continue-on-error: false
 
-      - name: Lint
+      - name: Lint code
+        id: lint
         run: npm run lint
+        continue-on-error: false
 
-      - name: Build
+      - name: Build application
+        id: build
         run: npm run build
         env:
           NEXT_PUBLIC_DOMAIN: online
           NEXT_PUBLIC_API_URL: https://cc24-api.vercel.app
           NODE_ENV: production
+        timeout-minutes: 10
 
       - name: Verify build output
         run: |
           if [ -d ".next" ]; then
             echo "✅ Build successful (.next/ directory found)"
+            echo "Build size:"
+            du -sh .next
+            echo "Build files:"
+            find .next -type f | wc -l
           else
             echo "❌ Build failed - no .next/ directory"
             exit 1
+          fi
+
+      - name: Cache build artifacts
+        if: success()
+        uses: actions/cache/save@v4.2.0
+        with:
+          path: |
+            .next
+            node_modules
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - name: Generate job summary
+        if: always()
+        run: |
+          echo "## CI Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type Check**: ${{ steps.type-check.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Lint**: ${{ steps.lint.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build**: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d ".next" ]; then
+            echo "- **Build Size**: $(du -sh .next | cut -f1)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Build Files**: $(find .next -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
           fi

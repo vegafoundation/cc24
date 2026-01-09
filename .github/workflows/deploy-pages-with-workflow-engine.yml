@@ -17,13 +17,15 @@ on:
         default: 'false'
         type: boolean
 
+# Explicit minimal permissions
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# Ensure only one deployment at a time
 concurrency:
-  group: "pages"
+  group: pages-workflow-engine-deploy
   cancel-in-progress: false
 
 jobs:
@@ -31,37 +33,57 @@ jobs:
   build-standard:
     if: ${{ !inputs.use_temporal && !inputs.use_argo }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4.1.0
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm install --no-audit
+      - name: Restore build cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            .next/cache
+          key: ${{ runner.os }}-pages-wf-standard-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pages-wf-standard-
+
+      - name: Install dependencies with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: npm install --no-audit --prefer-offline
 
       - name: Build for GitHub Pages
-        run: |
-          NEXT_PUBLIC_DOMAIN=online \
-          NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app \
-          NEXT_PUBLIC_STATIC_EXPORT=true \
-          NEXT_PUBLIC_BASE_PATH="" \
-          NODE_ENV=production \
-          npm run build:static
+        id: build
+        run: npm run build:static
         env:
           NEXT_PUBLIC_DOMAIN: online
           NEXT_PUBLIC_API_URL: https://cc24-api.vercel.app
           NEXT_PUBLIC_STATIC_EXPORT: "true"
           NEXT_PUBLIC_BASE_PATH: ""
           NODE_ENV: production
+        timeout-minutes: 10
 
       - name: Verify build output
         run: |
           if [ -d "out" ]; then
             echo "✅ Static export found in out/"
+            echo "Size: $(du -sh out | cut -f1)"
+            echo "Files: $(find out -type f | wc -l)"
             ls -la out/ | head -20
           else
             echo "❌ No build output found!"
@@ -69,10 +91,10 @@ jobs:
           fi
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5.0.0
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: './out'
           retention-days: 1
@@ -81,30 +103,50 @@ jobs:
   build-with-temporal:
     if: ${{ inputs.use_temporal == true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4.1.0
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: |
-          npm install --no-audit
-          npm install @temporalio/workflow @temporalio/activity @temporalio/client
+      - name: Restore build cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            .next/cache
+          key: ${{ runner.os }}-pages-wf-temporal-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pages-wf-temporal-
+
+      - name: Install dependencies with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            npm install --no-audit --prefer-offline
+            npm install @temporalio/workflow @temporalio/activity @temporalio/client
 
       - name: Build with Temporal Workflow
+        id: build
         run: |
           echo "🚀 Using Temporal Workflow Engine for deployment..."
           # Temporal Worker starten (wenn konfiguriert)
           # npm run temporal:deploy --branch=${{ github.ref_name }} --environment=production
           
           # Fallback: Standard Build
-          NEXT_PUBLIC_DOMAIN=online \
-          NEXT_PUBLIC_STATIC_EXPORT=true \
-          NODE_ENV=production \
           npm run build:static
         env:
           TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_ADDRESS }}
@@ -112,11 +154,14 @@ jobs:
           NEXT_PUBLIC_DOMAIN: online
           NEXT_PUBLIC_STATIC_EXPORT: "true"
           NODE_ENV: production
+        timeout-minutes: 15
 
       - name: Verify build output
         run: |
           if [ -d "out" ]; then
             echo "✅ Temporal workflow build successful!"
+            echo "Size: $(du -sh out | cut -f1)"
+            echo "Files: $(find out -type f | wc -l)"
             ls -la out/ | head -20
           else
             echo "❌ Build failed!"
@@ -124,10 +169,10 @@ jobs:
           fi
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5.0.0
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: './out'
           retention-days: 1
@@ -136,44 +181,93 @@ jobs:
   build-with-argo:
     if: ${{ inputs.use_argo == true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4.0.0
+        with:
+          version: 'latest'
 
-      - name: Setup Argo CLI
-        run: |
-          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.5.0/argo-linux-amd64.gz
-          gunzip argo-linux-amd64.gz
-          chmod +x argo-linux-amd64
-          sudo mv argo-linux-amd64 /usr/local/bin/argo
+      - name: Setup Argo CLI with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_on: error
+          command: |
+            curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.5.0/argo-linux-amd64.gz
+            gunzip argo-linux-amd64.gz
+            chmod +x argo-linux-amd64
+            sudo mv argo-linux-amd64 /usr/local/bin/argo
+            argo version
 
       - name: Configure Kubernetes
+        if: secrets.KUBECONFIG != ''
         run: |
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
           export KUBECONFIG=./kubeconfig
+          chmod 600 kubeconfig
+
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Restore build cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            .next/cache
+          key: ${{ runner.os }}-pages-wf-argo-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pages-wf-argo-
 
       - name: Submit Argo Workflow
+        id: argo-submit
+        continue-on-error: true
         run: |
           echo "🚀 Using Argo Workflows for deployment..."
-          argo submit workflows/argo-cc24-deploy.yaml \
-            -p branch=${{ github.ref_name }} \
-            -p environment=production \
-            --serviceaccount=argo-workflow || true
-          
-          # Fallback: Standard Build
-          npm install --no-audit
-          NEXT_PUBLIC_DOMAIN=online \
-          NEXT_PUBLIC_STATIC_EXPORT=true \
-          NODE_ENV=production \
-          npm run build:static
+          if [ -f "workflows/argo-cc24-deploy.yaml" ] && [ -f "kubeconfig" ]; then
+            export KUBECONFIG=./kubeconfig
+            argo submit workflows/argo-cc24-deploy.yaml \
+              -p branch=${{ github.ref_name }} \
+              -p environment=production \
+              --serviceaccount=argo-workflow || echo "Argo submission failed, will use fallback"
+          else
+            echo "⚠️ Argo workflow file or kubeconfig not found, using fallback"
+          fi
+        timeout-minutes: 5
+
+      - name: Fallback - Standard Build
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            npm install --no-audit --prefer-offline
+            npm run build:static
+        env:
+          NEXT_PUBLIC_DOMAIN: online
+          NEXT_PUBLIC_STATIC_EXPORT: "true"
+          NODE_ENV: production
 
       - name: Verify build output
         run: |
           if [ -d "out" ]; then
             echo "✅ Argo workflow build successful!"
+            echo "Size: $(du -sh out | cut -f1)"
+            echo "Files: $(find out -type f | wc -l)"
             ls -la out/ | head -20
           else
             echo "❌ Build failed!"
@@ -181,10 +275,10 @@ jobs:
           fi
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5.0.0
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: './out'
           retention-days: 1
@@ -195,9 +289,30 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [build-standard, build-with-temporal, build-with-argo]
     if: always() && (needs.build-standard.result == 'success' || needs.build-with-temporal.result == 'success' || needs.build-with-argo.result == 'success')
+    
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4.0.5
+
+      - name: Verify deployment
+        if: success()
+        run: |
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            echo "✅ Deployment successful"
+            echo "URL: ${{ steps.deployment.outputs.page_url }}"
+          fi
+
+      - name: Generate deployment summary
+        if: always()
+        run: |
+          echo "## Workflow Engine Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Method**: ${{ inputs.use_temporal && 'Temporal' || inputs.use_argo && 'Argo' || 'Standard' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          fi

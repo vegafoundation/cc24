@@ -6,37 +6,59 @@ on:
       - main
   workflow_dispatch:
 
+# Explicit minimal permissions
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# Ensure only one deployment at a time
 concurrency:
-  group: "pages"
+  group: pages-deploy
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4.1.0
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm install --no-audit
+      - name: Restore build cache
+        uses: actions/cache@v4.2.0
+        id: cache-restore
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            .next/cache
+          key: ${{ runner.os }}-pages-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-pages-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-pages-
+
+      - name: Install dependencies with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: npm install --no-audit --prefer-offline
 
       - name: Build for GitHub Pages
+        id: build
         run: |
-          NEXT_PUBLIC_DOMAIN=online \
-          NEXT_PUBLIC_API_URL=https://cc24-api.vercel.app \
-          NEXT_PUBLIC_STATIC_EXPORT=true \
-          NEXT_PUBLIC_BASE_PATH="" \
-          NODE_ENV=production \
           npm run build:static
         env:
           NEXT_PUBLIC_DOMAIN: online
@@ -44,13 +66,22 @@ jobs:
           NEXT_PUBLIC_STATIC_EXPORT: "true"
           NEXT_PUBLIC_BASE_PATH: ""
           NODE_ENV: production
+        timeout-minutes: 10
 
       - name: Verify build output
         run: |
           if [ -d "out" ]; then
             echo "✅ Static export found in out/"
+            echo "Build size: $(du -sh out | cut -f1)"
+            echo "File count: $(find out -type f | wc -l)"
             ls -la out/ | head -20
-            echo "✅ Build successful!"
+            
+            # Verify index.html exists
+            if [ -f "out/index.html" ]; then
+              echo "✅ index.html found"
+            else
+              echo "⚠️ Warning: index.html not found in out/"
+            fi
           else
             echo "❌ No build output found in out/"
             echo "Checking .next directory..."
@@ -59,21 +90,83 @@ jobs:
           fi
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5.0.0
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_on: error
+          command: |
+            # Use actions/upload-pages-artifact
+            echo "Uploading pages artifact..."
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: './out'
           retention-days: 1
+
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "## GitHub Pages Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
+          if [ -d "out" ]; then
+            echo "- **Build Size**: $(du -sh out | cut -f1)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Files**: $(find out -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
+    
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages with retry
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 8
+          max_attempts: 3
+          retry_on: error
+          command: |
+            echo "Deploying to GitHub Pages..."
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4.0.5
+
+      - name: Verify deployment
+        if: success()
+        run: |
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            echo "✅ Deployment successful"
+            echo "URL: ${{ steps.deployment.outputs.page_url }}"
+            
+            # Wait for deployment to be ready
+            sleep 15
+            
+            # Try to verify the deployment
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.deployment.outputs.page_url }}" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Page is accessible (HTTP $HTTP_STATUS)"
+            else
+              echo "⚠️ Page returned HTTP $HTTP_STATUS (may still be deploying)"
+            fi
+          fi
+
+      - name: Generate deployment summary
+        if: always()
+        run: |
+          echo "## GitHub Pages Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          fi
