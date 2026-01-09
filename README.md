@@ -2,7 +2,7 @@
 
 Vollständige **reaktive und responsive** Next.js 14 Webdemo für CarCompany24 mit VAVSR (VEGA Automotive Virtual Showroom) Integration.
 
-## 🚀 Features
+## 🚀 Features 
 
 ### ✅ Reaktive Features
 - **useState & useEffect** - Dynamische State-Verwaltung
