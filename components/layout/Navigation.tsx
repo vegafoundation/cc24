@@ -31,6 +31,9 @@ export default function Navigation() {
             <Link href="/vavsr" className="text-white hover:text-vega-cyan transition">
               VAVSR
             </Link>
+            <Link href="/hub" className="text-white hover:text-vega-cyan transition">
+              Hub
+            </Link>
             <Link href="/boerse" className="text-white hover:text-vega-cyan transition">
               Börse
             </Link>
@@ -65,6 +68,9 @@ export default function Navigation() {
             </Link>
             <Link href="/vavsr" className="block text-white hover:text-vega-cyan transition">
               VAVSR
+            </Link>
+            <Link href="/hub" className="block text-white hover:text-vega-cyan transition">
+              Hub
             </Link>
             <Link href="/boerse" className="block text-white hover:text-vega-cyan transition">
               Börse
