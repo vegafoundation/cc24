@@ -6,34 +6,187 @@ on:
       - main
   workflow_dispatch:
 
+# Explicit minimal permissions
+permissions:
+  contents: read
+  deployments: write
+
+# Ensure only one deployment at a time
+concurrency:
+  group: deploy-vercel-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: vercel-production
+      url: ${{ steps.deploy.outputs.url }}
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4.1.0
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+      - name: Restore npm cache
+        uses: actions/cache@v4.2.0
+        id: npm-cache
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-npm-vercel-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-vercel-
+            ${{ runner.os }}-npm-
 
-      - name: Install Dependencies
+      - name: Install Vercel CLI with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_on: error
+          command: npm install -g vercel@latest
+
+      - name: Install dependencies with retry
+        uses: nick-fields/retry@v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            if [ -f "package-lock.json" ]; then
+              npm ci --prefer-offline --no-audit
+            else
+              npm install --no-audit --prefer-offline
+            fi
+
+      - name: Validate environment
         run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci --prefer-offline --no-audit
-          else
-            npm install --no-audit
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "❌ VERCEL_TOKEN is not set"
+            exit 1
           fi
+          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+            echo "❌ VERCEL_ORG_ID is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "❌ VERCEL_PROJECT_ID is not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
 
       - name: Deploy to Vercel
+        id: deploy
         run: |
-          vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "Deploying to Vercel..."
+          DEPLOY_OUTPUT=$(vercel --prod --token "$VERCEL_TOKEN" --yes 2>&1)
+          EXIT_CODE=$?
+          echo "$DEPLOY_OUTPUT"
+          
+          # Extract deployment URL more reliably
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -E "https://[a-zA-Z0-9-]+\.vercel\.app" | grep -oE "https://[^\s]+" | head -1)
+          
+          if [ -z "$DEPLOY_URL" ]; then
+            # Fallback: try to get URL from vercel inspect
+            DEPLOY_URL=$(vercel ls --token "$VERCEL_TOKEN" 2>/dev/null | grep "https://" | head -1 | awk '{print $2}')
+          fi
+          
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "✅ Deployed to: $DEPLOY_URL"
+          else
+            echo "⚠️ Could not extract deployment URL from output"
+          fi
+          
+          exit $EXIT_CODE
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Retry Vercel deployment if failed
+        if: failure() && steps.deploy.outcome == 'failure'
+        id: deploy-retry
+        run: |
+          echo "Retrying Vercel deployment..."
+          sleep 10
+          DEPLOY_OUTPUT=$(vercel --prod --token "$VERCEL_TOKEN" --yes 2>&1)
+          EXIT_CODE=$?
+          echo "$DEPLOY_OUTPUT"
+          
+          # Extract deployment URL more reliably
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -E "https://[a-zA-Z0-9-]+\.vercel\.app" | grep -oE "https://[^\s]+" | head -1)
+          
+          if [ -z "$DEPLOY_URL" ]; then
+            # Fallback: try to get URL from vercel inspect
+            DEPLOY_URL=$(vercel ls --token "$VERCEL_TOKEN" 2>/dev/null | grep "https://" | head -1 | awk '{print $2}')
+          fi
+          
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "✅ Deployed to: $DEPLOY_URL"
+          else
+            echo "⚠️ Could not extract deployment URL from output"
+          fi
+          
+          exit $EXIT_CODE
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Verify deployment
+        if: success()
+        run: |
+          DEPLOY_URL="${{ steps.deploy.outputs.url }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            DEPLOY_URL="${{ steps.deploy-retry.outputs.url }}"
+          fi
+          
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "✅ Deployment successful"
+            echo "URL: $DEPLOY_URL"
+            
+            # Wait a bit for deployment to be fully ready
+            sleep 10
+            
+            # Try to curl the deployment URL
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
+              echo "✅ Deployment is accessible (HTTP $HTTP_STATUS)"
+            else
+              echo "⚠️ Deployment returned HTTP $HTTP_STATUS"
+            fi
+          else
+            echo "⚠️ Could not extract deployment URL"
+          fi
+
+      - name: Generate deployment summary
+        if: always()
+        run: |
+          DEPLOY_URL="${{ steps.deploy.outputs.url }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            DEPLOY_URL="${{ steps.deploy-retry.outputs.url }}"
+          fi
+          
+          echo "## Vercel Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "- **URL**: $DEPLOY_URL" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
