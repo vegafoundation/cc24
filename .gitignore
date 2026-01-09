@@ -48,3 +48,19 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+# Docker
+uploads/

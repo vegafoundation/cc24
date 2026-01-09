@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 import base64
 import io
+import os
 from PIL import Image
 
 app = FastAPI(
@@ -17,14 +18,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+# CORS - configurable via environment
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://frontend:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Default model from environment
+DEFAULT_MODEL = os.getenv("ML_DEFAULT_MODEL", "u2net")
 
 # Lazy load rembg to avoid startup delay
 _rembg_session = None
@@ -34,7 +40,7 @@ def get_rembg_session():
     global _rembg_session
     if _rembg_session is None:
         from rembg import new_session
-        _rembg_session = new_session("u2net")
+        _rembg_session = new_session(DEFAULT_MODEL)
     return _rembg_session
 
 
