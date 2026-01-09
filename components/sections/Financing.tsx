@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import FinancingCalculator from '@/components/financing/FinancingCalculator'
 
 export default function Financing() {
   return (
@@ -50,42 +51,8 @@ export default function Financing() {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="bg-gray-800 p-8 rounded-lg border border-vega-cyan/20"
           >
-            <h3 className="text-2xl font-semibold text-white mb-6">
-              Finanzierungsrechner
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-300 mb-2">Fahrzeugpreis</label>
-                <input
-                  type="number"
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white"
-                  placeholder="25.000 €"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 mb-2">Anzahlung</label>
-                <input
-                  type="number"
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white"
-                  placeholder="5.000 €"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 mb-2">Laufzeit</label>
-                <select className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white">
-                  <option>36 Monate</option>
-                  <option>48 Monate</option>
-                  <option>60 Monate</option>
-                  <option>72 Monate</option>
-                </select>
-              </div>
-              <div className="pt-4 border-t border-gray-700">
-                <p className="text-gray-300 mb-2">Geschätzte monatliche Rate:</p>
-                <p className="text-3xl font-bold text-vega-cyan">ca. 450 €</p>
-              </div>
-            </div>
+            <FinancingCalculator />
           </motion.div>
         </div>
       </div>

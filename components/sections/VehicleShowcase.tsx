@@ -31,7 +31,17 @@ export default function VehicleShowcase() {
     return (
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-400">Lade Fahrzeuge...</div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl font-display font-bold text-center mb-12 bg-gradient-to-r from-vega-cyan to-vega-emerald bg-clip-text text-transparent"
+          >
+            Unsere Premium Fahrzeuge
+          </motion.h2>
+          <div className="flex items-center justify-center space-x-2 text-gray-400">
+            <div className="w-8 h-8 border-4 border-vega-cyan border-t-transparent rounded-full animate-spin"></div>
+            <span>Lade Fahrzeuge von Mobile.de...</span>
+          </div>
         </div>
       </section>
     )

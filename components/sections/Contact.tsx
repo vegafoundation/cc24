@@ -2,6 +2,8 @@
 
 import { motion } from 'framer-motion'
 import { Mail, Phone, MapPin } from 'lucide-react'
+import OfferForm from '@/components/contact/OfferForm'
+import OfferForm from '@/components/contact/OfferForm'
 
 export default function Contact() {
   return (
@@ -51,6 +53,10 @@ export default function Contact() {
             <h3 className="text-xl font-semibold text-white mb-2">Adresse</h3>
             <p className="text-gray-400">Musterstraße 123<br />12345 Musterstadt</p>
           </motion.div>
+        </div>
+
+        <div className="mt-12">
+          <OfferForm />
         </div>
       </div>
     </section>

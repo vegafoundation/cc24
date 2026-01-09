@@ -43,7 +43,10 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
     return (
       <div className="min-h-screen pt-20 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-400 py-20">Lade Fahrzeugdetails...</div>
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="w-16 h-16 border-4 border-vega-cyan border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-400 text-lg">Lade Fahrzeugdetails von Mobile.de...</p>
+          </div>
         </div>
       </div>
     )

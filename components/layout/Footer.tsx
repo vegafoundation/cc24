@@ -54,8 +54,15 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Kontakt</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li>Email: info@carcompany24.de</li>
+              <li>
+                <strong className="text-white">CarCompany24 GmbH</strong>
+              </li>
+              <li>Musterstraße 123</li>
+              <li>12345 Musterstadt</li>
+              <li className="mt-2">Email: info@carcompany24.de</li>
               <li>Tel: +49 (0) XXX XXX XXX</li>
+              <li>USt-IdNr.: DE XXXXXXXX</li>
+              <li>HRB: XXXXX</li>
             </ul>
           </div>
         </div>

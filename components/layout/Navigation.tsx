@@ -12,9 +12,17 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-display font-bold text-vega-cyan">
-              CC24
-            </span>
+            <svg width="120" height="36" viewBox="0 0 200 60" className="h-8 w-auto">
+              <defs>
+                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style={{stopColor:'#00D9FF',stopOpacity:1}} />
+                  <stop offset="100%" style={{stopColor:'#10B981',stopOpacity:1}} />
+                </linearGradient>
+              </defs>
+              <text x="10" y="40" fontFamily="Orbitron, monospace" fontSize="32" fontWeight="bold" fill="url(#logoGradient)">
+                CC24
+              </text>
+            </svg>
           </Link>
 
           {/* Desktop Navigation */}
