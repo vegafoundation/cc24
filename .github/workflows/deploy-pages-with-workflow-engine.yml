@@ -208,11 +208,18 @@ jobs:
             argo version
 
       - name: Configure Kubernetes
-        if: ${{ secrets.KUBECONFIG != '' }}
         run: |
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=./kubeconfig
-          chmod 600 kubeconfig
+          if [ -n "$KUBECONFIG_B64" ]; then
+            echo "Configuring Kubernetes..."
+            echo "$KUBECONFIG_B64" | base64 -d > kubeconfig
+            export KUBECONFIG=./kubeconfig
+            chmod 600 kubeconfig
+            echo "✅ Kubernetes configured"
+          else
+            echo "⚠️ KUBECONFIG secret not set, skipping Kubernetes configuration"
+          fi
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG }}
 
       - name: Setup Node.js with caching
         uses: actions/setup-node@v4.1.0

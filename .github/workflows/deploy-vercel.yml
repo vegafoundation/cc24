@@ -89,11 +89,28 @@ jobs:
       - name: Deploy to Vercel
         id: deploy
         run: |
+          echo "Deploying to Vercel..."
           DEPLOY_OUTPUT=$(vercel --prod --token "$VERCEL_TOKEN" --yes 2>&1)
+          EXIT_CODE=$?
           echo "$DEPLOY_OUTPUT"
-          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | tail -1)
+          
+          # Extract deployment URL more reliably
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -E "https://[a-zA-Z0-9-]+\.vercel\.app" | grep -oE "https://[^\s]+" | head -1)
+          
+          if [ -z "$DEPLOY_URL" ]; then
+            # Fallback: try to get URL from vercel inspect
+            DEPLOY_URL=$(vercel ls --token "$VERCEL_TOKEN" 2>/dev/null | grep "https://" | head -1 | awk '{print $2}')
+          fi
+          
           echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "✅ Deployed to: $DEPLOY_URL"
+          
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "✅ Deployed to: $DEPLOY_URL"
+          else
+            echo "⚠️ Could not extract deployment URL from output"
+          fi
+          
+          exit $EXIT_CODE
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -106,10 +123,26 @@ jobs:
           echo "Retrying Vercel deployment..."
           sleep 10
           DEPLOY_OUTPUT=$(vercel --prod --token "$VERCEL_TOKEN" --yes 2>&1)
+          EXIT_CODE=$?
           echo "$DEPLOY_OUTPUT"
-          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+' | tail -1)
+          
+          # Extract deployment URL more reliably
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -E "https://[a-zA-Z0-9-]+\.vercel\.app" | grep -oE "https://[^\s]+" | head -1)
+          
+          if [ -z "$DEPLOY_URL" ]; then
+            # Fallback: try to get URL from vercel inspect
+            DEPLOY_URL=$(vercel ls --token "$VERCEL_TOKEN" 2>/dev/null | grep "https://" | head -1 | awk '{print $2}')
+          fi
+          
           echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "✅ Deployed to: $DEPLOY_URL"
+          
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "✅ Deployed to: $DEPLOY_URL"
+          else
+            echo "⚠️ Could not extract deployment URL from output"
+          fi
+          
+          exit $EXIT_CODE
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
