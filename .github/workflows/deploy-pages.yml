@@ -26,14 +26,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          # Cache nur wenn package-lock.json existiert
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
 
       - name: Install dependencies
         run: |
           if [ -f "package-lock.json" ]; then
+            echo "Using package-lock.json"
             npm ci --prefer-offline --no-audit
           else
+            echo "No package-lock.json found, creating it..."
+            npm install --no-audit --package-lock-only
             npm install --no-audit
           fi
 
