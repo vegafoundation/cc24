@@ -1,88 +1,139 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Car } from 'lucide-react'
+import { getDomainConfig } from '@/lib/domains'
+import DomainSelector from '@/components/domain/DomainSelector'
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const [domainConfig, setDomainConfig] = useState<any>(null)
+
+  useEffect(() => {
+    setDomainConfig(getDomainConfig())
+  }, [])
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-sm border-b border-vega-cyan/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link href="/" className="flex items-center space-x-2">
-            <svg width="120" height="36" viewBox="0 0 200 60" className="h-8 w-auto">
-              <defs>
-                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" style={{stopColor:'#00D9FF',stopOpacity:1}} />
-                  <stop offset="100%" style={{stopColor:'#10B981',stopOpacity:1}} />
-                </linearGradient>
-              </defs>
-              <text x="10" y="40" fontFamily="Orbitron, monospace" fontSize="32" fontWeight="bold" fill="url(#logoGradient)">
-                CC24
-              </text>
-            </svg>
+    <nav className="bg-white shadow-md sticky top-0 z-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <Car 
+              className="w-8 h-8" 
+              style={{ color: domainConfig?.primaryColor || '#E63946' }} 
+            />
+            <span className="text-xl font-bold">
+              <span style={{ color: domainConfig?.primaryColor || '#E63946' }}>
+                Car
+              </span>
+              <span className="text-gray-900">Company</span>
+              <span style={{ color: domainConfig?.primaryColor || '#E63946' }}>
+                24
+              </span>
+              {domainConfig && (
+                <span className="text-xs ml-1 opacity-70">
+                  {domainConfig.domain.includes('.') ? `.${domainConfig.domain.split('.')[1]}` : ''}
+                </span>
+              )}
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-8">
-            <Link href="/" className="text-white hover:text-vega-cyan transition">
-              Startseite
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/" className="text-gray-700 hover:text-primary-500 transition-colors">
+              Start
             </Link>
-            <Link href="/fahrzeuge" className="text-white hover:text-vega-cyan transition">
-              Fahrzeuge
-            </Link>
-            <Link href="/finanzierung" className="text-white hover:text-vega-cyan transition">
-              Finanzierung
-            </Link>
-            <Link href="/vavsr" className="text-white hover:text-vega-cyan transition">
-              VAVSR
-            </Link>
-            <Link href="/boerse" className="text-white hover:text-vega-cyan transition">
+            <Link href="/boerse" className="text-gray-700 hover:text-primary-500 transition-colors">
               Börse
             </Link>
-            <Link href="/admin" className="text-white hover:text-vega-cyan transition">
-              Admin
+            <Link href="/vavsr" className="text-gray-700 hover:text-primary-500 transition-colors">
+              VAVSR
             </Link>
-            <Link href="/kontakt" className="text-white hover:text-vega-cyan transition">
+            <Link href="/fahrzeuge" className="text-gray-700 hover:text-primary-500 transition-colors">
+              Fahrzeuge
+            </Link>
+            <Link href="/finanzierung" className="text-gray-700 hover:text-primary-500 transition-colors">
+              Finanzierung
+            </Link>
+            <Link href="/#services" className="text-gray-700 hover:text-primary-500 transition-colors">
+              Service
+            </Link>
+            <Link href="/#contact" className="text-gray-700 hover:text-primary-500 transition-colors">
               Kontakt
             </Link>
+            <Link
+              href="/#contact"
+              className="px-6 py-2 rounded-lg transition-colors text-white font-semibold"
+              style={{
+                background: domainConfig 
+                  ? `linear-gradient(135deg, ${domainConfig.primaryColor}, ${domainConfig.secondaryColor})`
+                  : '#E63946'
+              }}
+            >
+              {domainConfig?.cta || 'Jetzt anfragen'}
+            </Link>
+            <DomainSelector />
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-white"
             onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden p-2 text-gray-700"
+            aria-label="Menu"
           >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden py-4 space-y-2">
-            <Link href="/" className="block text-white hover:text-vega-cyan transition">
-              Startseite
-            </Link>
-            <Link href="/fahrzeuge" className="block text-white hover:text-vega-cyan transition">
-              Fahrzeuge
-            </Link>
-            <Link href="/finanzierung" className="block text-white hover:text-vega-cyan transition">
-              Finanzierung
-            </Link>
-            <Link href="/vavsr" className="block text-white hover:text-vega-cyan transition">
-              VAVSR
-            </Link>
-            <Link href="/boerse" className="block text-white hover:text-vega-cyan transition">
-              Börse
-            </Link>
-            <Link href="/admin" className="block text-white hover:text-vega-cyan transition">
-              Admin
-            </Link>
-            <Link href="/kontakt" className="block text-white hover:text-vega-cyan transition">
-              Kontakt
-            </Link>
+          <div className="md:hidden py-4 border-t">
+            <div className="flex flex-col gap-4">
+              <Link
+                href="/"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-700 hover:text-primary-500 transition-colors"
+              >
+                Start
+              </Link>
+              <Link
+                href="/fahrzeuge"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-700 hover:text-primary-500 transition-colors"
+              >
+                Fahrzeuge
+              </Link>
+              <Link
+                href="/finanzierung"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-700 hover:text-primary-500 transition-colors"
+              >
+                Finanzierung
+              </Link>
+              <Link
+                href="/#services"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-700 hover:text-primary-500 transition-colors"
+              >
+                Service
+              </Link>
+              <Link
+                href="/#contact"
+                onClick={() => setIsOpen(false)}
+                className="text-gray-700 hover:text-primary-500 transition-colors"
+              >
+                Kontakt
+              </Link>
+              <Link
+                href="/#contact"
+                onClick={() => setIsOpen(false)}
+                className="bg-primary-500 hover:bg-primary-600 text-white px-6 py-2 rounded-lg text-center transition-colors"
+              >
+                Jetzt anfragen
+              </Link>
+            </div>
           </div>
         )}
       </div>

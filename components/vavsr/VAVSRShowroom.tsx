@@ -1,145 +1,70 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import Viewer360 from './Viewer360'
-import BackgroundSelector from './BackgroundSelector'
-import { vehicleApi, Vehicle } from '@/lib/api'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 
-interface VAVSRShowroomProps {
-  vehicleId?: number
+// Dynamisches Laden des Showroom-Clients (aus Beta)
+const ShowroomClient = dynamic(() => import('./ShowroomClient'), {
+  ssr: false,
+  loading: () => <VAVSRLoader />
+})
+
+function VAVSRLoader() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="inline-flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-2xl font-bold">
+            <span className="text-primary-500">VAVSR</span>
+            <span className="text-white"> - VEGA Automotive Virtual Showroom</span>
+          </span>
+        </div>
+        <p className="text-gray-400">Lade Showroom...</p>
+      </div>
+    </div>
+  )
 }
 
-export default function VAVSRShowroom({ vehicleId }: VAVSRShowroomProps) {
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
-  const [selectedBackground, setSelectedBackground] = useState('vavsr_cyan')
-  const [loading, setLoading] = useState(true)
-  const [images, setImages] = useState<string[]>([])
-
-  useEffect(() => {
-    if (vehicleId) {
-      fetchVehicle()
-    } else {
-      // Load first vehicle as demo
-      loadDemoVehicle()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicleId])
-
-  const fetchVehicle = async () => {
-    try {
-      setLoading(true)
-      const data = await vehicleApi.getVehicle(vehicleId!)
-      setVehicle(data)
-      setImages(data.image_urls || [])
-    } catch (error) {
-      console.error('Error fetching vehicle:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadDemoVehicle = async () => {
-    try {
-      setLoading(true)
-      const vehicles = await vehicleApi.getVehicles({ limit: 1 })
-      if (vehicles.length > 0) {
-        setVehicle(vehicles[0])
-        setImages(vehicles[0].image_urls || [])
-      }
-    } catch (error) {
-      console.error('Error loading demo vehicle:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-vega-cyan mx-auto mb-4"></div>
-          <p className="text-gray-400">Lade VAVSR Showroom...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!vehicle || images.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <p className="text-gray-400 mb-4">Kein Fahrzeug mit Bildern gefunden.</p>
-          <p className="text-sm text-gray-500">Bitte synchronisieren Sie Fahrzeuge von Mobile.de.</p>
-        </div>
-      </div>
-    )
-  }
-
+export default function VAVSRShowroom() {
   return (
-    <div className="min-h-screen bg-gray-900 pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-display font-bold mb-2 bg-gradient-to-r from-vega-cyan to-vega-emerald bg-clip-text text-transparent">
-            VAVSR - VEGA Automotive Virtual Showroom
-          </h1>
-          <p className="text-gray-400">{vehicle.title}</p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 360 Viewer */}
-          <div className="lg:col-span-2">
-            <Viewer360
-              images={images}
-              background={selectedBackground}
-              vehicleTitle={vehicle.title}
-            />
-          </div>
-
-          {/* Controls */}
-          <div className="space-y-6">
-            <BackgroundSelector
-              selected={selectedBackground}
-              onSelect={setSelectedBackground}
-            />
-
-            {/* Vehicle Info */}
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">Fahrzeugdetails</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-gray-400">Preis:</span>
-                  <p className="text-white font-semibold">
-                    {vehicle.price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                  </p>
-                </div>
-                {vehicle.year && (
-                  <div>
-                    <span className="text-gray-400">Baujahr:</span>
-                    <p className="text-white">{vehicle.year}</p>
-                  </div>
-                )}
-                {vehicle.mileage && (
-                  <div>
-                    <span className="text-gray-400">Kilometerstand:</span>
-                    <p className="text-white">{vehicle.mileage.toLocaleString('de-DE')} km</p>
-                  </div>
-                )}
-                {vehicle.fuel_type && (
-                  <div>
-                    <span className="text-gray-400">Kraftstoff:</span>
-                    <p className="text-white">{vehicle.fuel_type}</p>
-                  </div>
-                )}
-              </div>
+    <div className="min-h-screen">
+      {/* VAVSR Header */}
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">V</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">
+                <span className="text-primary-500">VAVSR</span>
+                <span className="text-gray-300"> - VEGA Automotive Virtual Showroom</span>
+              </h1>
+              <p className="text-xs text-gray-500">
+                Powered by VEGA Enterprise • CarCompany24 GmbH
+              </p>
             </div>
           </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="/boerse"
+              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              Zur Börse
+            </a>
+            <a
+              href="/"
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              Startseite
+            </a>
+          </div>
         </div>
-      </div>
+      </header>
+
+      {/* Showroom Client */}
+      <ShowroomClient />
     </div>
   )
 }
