@@ -80,7 +80,7 @@ jobs:
   # - Or workflow_dispatch input: dockerhub_image
   # - Falls back to DOCKERHUB_USERNAME/cc24-demo
   deploy-dockerhub:
-    if: ${{ vars.DOCKERHUB_USERNAME != '' || secrets.DOCKERHUB_USERNAME != '' }}
+    if: ${{ secrets.DOCKERHUB_USERNAME != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -109,14 +109,6 @@ jobs:
           echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
           echo "Using Docker Hub image: $IMAGE_NAME"
 
-      - name: Determine tag
-        id: tag
-        run: |
-          # Use input tag if provided via workflow_dispatch
-          if [ -n "${{ inputs.tag }}" ]; then
-            echo "custom_tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -125,7 +117,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=raw,value=${{ inputs.tag || 'latest' }},enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') && inputs.tag == '' }}
             type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
       - name: Build and push to Docker Hub
