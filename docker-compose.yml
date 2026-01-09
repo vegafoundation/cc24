@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  cc24-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_DOMAIN: ${NEXT_PUBLIC_DOMAIN:-online}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://cc24-api.vercel.app}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        DOCKER_BUILD: "true"
+    container_name: cc24-demo
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_DOMAIN=${NEXT_PUBLIC_DOMAIN:-online}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://cc24-api.vercel.app}
+      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
