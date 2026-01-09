@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export', // Static export für GitHub Pages
+  // Output-Konfiguration für Multi-Deployment
+  // - Vercel: Standard Next.js (kein output)
+  // - GitHub Pages: Static export (NEXT_PUBLIC_STATIC_EXPORT=true)
+  // - Docker: Standalone (DOCKER_BUILD=true)
+  output: process.env.DOCKER_BUILD === 'true' 
+    ? 'standalone' 
+    : (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true' ? 'export' : undefined),
   images: {
-    unoptimized: true, // Für GitHub Pages notwendig
+    unoptimized: process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true', // Nur für GitHub Pages
     domains: [
       'localhost',
       'carcompany24-gmbh.de',
@@ -19,17 +25,18 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
-  experimental: {
-    optimizeCss: true,
-  },
+  // experimental: {
+  //   optimizeCss: true, // Deaktiviert - benötigt 'critters' Package
+  // },
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  // GitHub Pages basePath (optional, wenn im Subfolder)
-  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
-  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
-  // Trailing slash für GitHub Pages
-  trailingSlash: true,
+  // GitHub Pages basePath (nur wenn gesetzt)
+  ...(process.env.NEXT_PUBLIC_BASE_PATH && {
+    basePath: process.env.NEXT_PUBLIC_BASE_PATH,
+    assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH,
+    trailingSlash: true,
+  }),
   // Multi-Domain Support
   async headers() {
     return [
