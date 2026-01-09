@@ -1,129 +1,162 @@
-# CC24 Demo - CarCompany24 Fullstack Webdemo
+# 🚗 CarCompany24 - Fullstack Webdemo v1.0.0
 
-Vollständige **reaktive und responsive** Next.js 14 Webdemo für CarCompany24 mit VAVSR (VEGA Automotive Virtual Showroom) Integration.
+**Multi-Domain Website für CC24.ONLINE und CC24.VIP**
 
-## 🚀 Features
+Professionelle Autohändler-Website mit 360° Virtual Showroom, Finanzierungsrechner und Online-Börse.
 
-### ✅ Reaktive Features
-- **useState & useEffect** - Dynamische State-Verwaltung
-- **API Integration** - Live-Daten von Mobile.de
-- **Interaktive Komponenten** - Viewer360, VAVSR Showroom
-- **Loading States** - Spinner und Ladeanzeigen
-- **Error Handling** - Fehlerbehandlung mit Fallbacks
-- **Real-time Updates** - Automatische Datenaktualisierung
+**Status:** ✅ Production Ready | GitHub Pages Deployed
 
-### ✅ Responsive Design
-- **Mobile-First** - Optimiert für alle Bildschirmgrößen
-- **Breakpoints** - sm, md, lg, xl (Tailwind CSS)
-- **Mobile Navigation** - Hamburger Menu für Mobile
-- **Responsive Grids** - Automatische Layout-Anpassung
-- **Touch-Friendly** - Optimiert für Touch-Geräte
-- **Flexible Images** - Responsive Bilder mit Next.js Image
+## 🌐 Domains
 
-### ✅ Technologie-Stack
-- ✅ Next.js 14 mit App Router
-- ✅ TypeScript
-- ✅ Tailwind CSS mit VEGA Design System
-- ✅ Framer Motion Animationen
-- ✅ VAVSR - 360° Virtual Showroom
-- ✅ React Query für State Management
-- ✅ Axios für API Calls
+- **CC24.ONLINE** - Online-Fokus, schnelle Transaktionen
+- **CC24.VIP** - Premium-Fokus, exklusive Fahrzeuge
+- **GitHub Pages** - Live Webdemo
 
-## 📁 Struktur
+## 🚀 Quick Deploy - GitHub Pages
 
-```
-cc24.demo/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx          # Root Layout
-│   ├── page.tsx            # Homepage (reaktiv)
-│   ├── fahrzeuge/          # Fahrzeuge Seiten (dynamisch)
-│   ├── vavsr/              # VAVSR Showroom (interaktiv)
-│   └── admin/              # Admin Panel
-├── components/             # React Komponenten
-│   ├── layout/             # Navigation (responsive), Footer
-│   ├── sections/           # Hero, Services, etc. (reaktiv)
-│   ├── vavsr/              # VAVSR Komponenten (interaktiv)
-│   └── animations/         # ParticleBackground (animiert)
-├── lib/                    # Utilities & API (reaktiv)
-├── public/                 # Statische Assets
-└── scripts/                # Deployment Scripts
+### Schritt 1: GitHub Repository erstellen
+
+1. Gehe zu https://github.com/new
+2. Repository Name: `enterprise` (oder dein Name)
+3. Public oder Private
+4. **NICHT** README, .gitignore oder License hinzufügen
+5. Create repository
+
+### Schritt 2: Code pushen
+
+```powershell
+# PowerShell Script (Empfohlen)
+cd C:\VRBS\ENTERPRISE\CarCompany24\CC24
+.\scripts\quick-deploy.ps1
 ```
 
-## 🛠️ Installation
+**Oder manuell:**
+```bash
+git init
+git add .
+git commit -m "Initial commit: CC24 Website"
+git remote add origin https://github.com/[USERNAME]/enterprise.git
+git push -u origin main
+```
+
+### Schritt 3: GitHub Pages aktivieren
+
+1. GitHub Repository → **Settings** → **Pages**
+2. **Source:** GitHub Actions
+3. **Branch:** main
+4. Save
+
+### Schritt 4: Custom Domains hinzufügen
+
+1. GitHub Repository → **Settings** → **Pages**
+2. **Custom domain:** `cc24.online` hinzufügen
+3. **Custom domain:** `cc24.vip` hinzufügen
+4. GitHub erstellt automatisch `CNAME` Dateien
+
+### Schritt 5: DNS Records setzen
+
+**Bei deinem Domain-Provider:**
+
+**CC24.ONLINE:**
+```
+4x A Records:
+@ → 185.199.108.153
+@ → 185.199.109.153
+@ → 185.199.110.153
+@ → 185.199.111.153
+
+1x CNAME:
+www → [USERNAME].github.io
+```
+
+**CC24.VIP:**
+```
+4x A Records:
+@ → 185.199.108.153
+@ → 185.199.109.153
+@ → 185.199.110.153
+@ → 185.199.111.153
+
+1x CNAME:
+www → [USERNAME].github.io
+```
+
+**WICHTIG:** Alle 4 IPs müssen gesetzt werden!
+
+### Schritt 6: Warten & Testen
+
+- **GitHub Actions:** 2-5 Minuten
+- **DNS Propagation:** 5-60 Minuten
+- **SSL:** Automatisch nach DNS
+
+**Teste:**
+- https://cc24.online
+- https://cc24.vip
+
+## 📋 DNS Records
+
+Siehe `DNS_RECORDS.txt` für alle DNS-Konfigurationen.
+
+## 🎯 Features
+
+### Frontend (Next.js 14)
+- ✅ **Multi-Domain Support** - CC24.ONLINE & CC24.VIP
+- ✅ **Animative UI** - Micro-Partikel, Scroll-Reveal
+- ✅ **360° VAVSR Showroom** - Aus 8 Fotos
+- ✅ **Demo-Komponenten** - Stats, Testimonials, Newsletter
+- ✅ **GitHub Pages Ready** - Statischer Export
+
+### Backend (FastAPI)
+- ✅ **PostgreSQL Database**
+- ✅ **VEGA Commission** - 13.58%
+- ✅ **REST API**
+
+## 📁 Projektstruktur
+
+```
+CC24/
+├── .github/
+│   └── workflows/
+│       └── deploy-pages.yml    # GitHub Actions
+├── app/                        # Next.js App Router
+├── components/                 # React Komponenten
+├── backend/                    # FastAPI Backend
+├── scripts/                    # Deployment Scripts
+└── docs/                       # Dokumentation
+```
+
+## 🔄 Updates deployen
 
 ```bash
-npm install
+git add .
+git commit -m "Update: Beschreibung"
+git push origin main
 ```
 
-## 🚀 Development
+Automatisches Deployment via GitHub Actions!
 
-```bash
-npm run dev
-```
+## 📚 Dokumentation
 
-Die Website läuft auf `http://localhost:3000` mit **Hot Reload** und **Fast Refresh**.
+- `DNS_RECORDS.txt` - Alle DNS Records
+- `GITHUB_DEPLOY.md` - Schnellstart-Guide
+- `DEPLOYMENT.md` - Vollständige Anleitung
+- `docs/GITHUB_PAGES_SETUP.md` - Detailliertes Setup
 
-## 📦 Build
+## ✅ Deployment-Checklist
 
-```bash
-# Standard Build (reaktiv)
-npm run build
+- [ ] GitHub Repository erstellt
+- [ ] Code gepusht (`.\scripts\quick-deploy.ps1`)
+- [ ] GitHub Pages aktiviert (GitHub Actions)
+- [ ] Custom Domains hinzugefügt (cc24.online, cc24.vip)
+- [ ] DNS Records gesetzt (alle 4 IPs)
+- [ ] DNS Propagation geprüft (dnschecker.org)
+- [ ] Website erreichbar (https://cc24.online)
+- [ ] SSL aktiv (automatisch)
 
-# Static Export (nur für GitHub Pages)
-npm run build:static
-```
+---
 
-## 🌐 Multi-Deployment
+**Status:** ✅ GitHub Pages Ready
 
-### Vercel (Empfohlen - Reaktiv)
-- Automatisch via GitHub Actions
-- Workflow: `.github/workflows/deploy-vercel.yml`
-- **Vollständig reaktiv** - Alle Features funktionieren
+**Domains:** CC24.ONLINE ✅ | CC24.VIP ✅
 
-### GitHub Pages (Statisch)
-- Automatisch via GitHub Actions
-- Workflow: `.github/workflows/deploy-pages.yml`
-- **Eingeschränkt** - Nur statische Seiten
-
-### Docker (Reaktiv)
-```bash
-docker-compose up --build
-```
-- Läuft auf Port 3000
-- **Vollständig reaktiv**
-
-## 🎨 Reaktive Features im Detail
-
-### 1. VehicleShowcase
-- ✅ Live API Calls zu Mobile.de
-- ✅ Loading States mit Spinner
-- ✅ Error Handling mit Fallbacks
-- ✅ Responsive Grid (1 Spalte Mobile, 3 Spalten Desktop)
-
-### 2. VAVSR Showroom
-- ✅ Interaktiver 360° Viewer
-- ✅ Drag & Drop Navigation
-- ✅ Background Selector
-- ✅ Auto-Rotate Feature
-- ✅ Touch-Gesten für Mobile
-
-### 3. Navigation
-- ✅ Mobile Hamburger Menu
-- ✅ Smooth Transitions
-- ✅ Responsive Breakpoints
-
-### 4. VehicleDetailClient
-- ✅ Dynamische Datenladung
-- ✅ Bildergalerie mit Interaktion
-- ✅ Responsive Layout
-
-## 📱 Responsive Breakpoints
-
-- **Mobile**: < 640px (sm)
-- **Tablet**: 640px - 1024px (md)
-- **Desktop**: > 1024px (lg)
-- **Large Desktop**: > 1280px (xl)
-
-## 📝 License
-
-Private - CarCompany24 GmbH
+**Deployment:** Automatisch via GitHub Actions

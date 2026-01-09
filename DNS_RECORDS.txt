@@ -1,0 +1,148 @@
+================================================================================
+DNS RECORDS FÜR CC24.ONLINE & CC24.VIP
+================================================================================
+
+GITHUB PAGES DEPLOYMENT
+================================================================================
+
+OPTION 1: GITHUB PAGES MIT CUSTOM DOMAIN (EMPFOHLEN)
+================================================================================
+
+CC24.ONLINE:
+--------------------------------------------------------------------------------
+Type: A
+Name: @
+Value: 185.199.108.153
+Value: 185.199.109.153
+Value: 185.199.110.153
+Value: 185.199.111.153
+TTL: 3600
+
+Type: CNAME
+Name: www
+Value: [USERNAME].github.io
+TTL: 3600
+
+--------------------------------------------------------------------------------
+
+CC24.VIP:
+--------------------------------------------------------------------------------
+Type: A
+Name: @
+Value: 185.199.108.153
+Value: 185.199.109.153
+Value: 185.199.110.153
+Value: 185.199.111.153
+TTL: 3600
+
+Type: CNAME
+Name: www
+Value: [USERNAME].github.io
+TTL: 3600
+
+================================================================================
+OPTION 2: VERCEL DEPLOYMENT (ALTERNATIVE)
+================================================================================
+
+CC24.ONLINE:
+--------------------------------------------------------------------------------
+Type: A
+Name: @
+Value: 76.76.21.21
+TTL: 3600 (oder Automatic)
+
+Type: CNAME
+Name: www
+Value: cname.vercel-dns.com
+TTL: 3600 (oder Automatic)
+
+--------------------------------------------------------------------------------
+
+CC24.VIP:
+--------------------------------------------------------------------------------
+Type: A
+Name: @
+Value: 76.76.21.21
+TTL: 3600 (oder Automatic)
+
+Type: CNAME
+Name: www
+Value: cname.vercel-dns.com
+TTL: 3600 (oder Automatic)
+
+================================================================================
+GITHUB PAGES IP-ADRESSEN (2024)
+================================================================================
+
+Diese IPs müssen ALLE als A-Records gesetzt werden:
+
+185.199.108.153
+185.199.109.153
+185.199.110.153
+185.199.111.153
+
+WICHTIG: Alle 4 IPs müssen gesetzt werden für Load Balancing!
+
+================================================================================
+DEPLOYMENT SCHRITTE FÜR GITHUB PAGES
+================================================================================
+
+1. GitHub Repository erstellen
+   - https://github.com/new
+   - Name: enterprise (oder dein Repo-Name)
+   - Public oder Private
+
+2. Code pushen
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/[USERNAME]/enterprise.git
+   git push -u origin main
+
+3. GitHub Pages aktivieren
+   - Repository → Settings → Pages
+   - Source: GitHub Actions
+   - Branch: main
+
+4. Custom Domains hinzufügen
+   - Repository → Settings → Pages
+   - Custom domain: cc24.online
+   - Custom domain: cc24.vip
+   - GitHub erstellt automatisch CNAME Dateien
+
+5. DNS Records setzen
+   - Gehe zu deinem Domain-Provider
+   - Setze die A-Records (alle 4 IPs)
+   - Setze CNAME für www
+
+6. Warten auf Propagation
+   - Normal: 5-60 Minuten
+   - Maximum: 24-48 Stunden
+   - Prüfen: https://dnschecker.org
+
+7. SSL aktiviert automatisch
+   - GitHub aktiviert automatisch SSL für Custom Domains
+   - Warte 5-10 Minuten nach DNS-Propagation
+
+================================================================================
+VERIFIZIERUNG
+================================================================================
+
+Nach Deployment prüfen:
+
+✅ Website erreichbar: https://cc24.online
+✅ Website erreichbar: https://cc24.vip
+✅ SSL aktiv (grünes Schloss im Browser)
+✅ Domain-Erkennung funktioniert (Farben)
+✅ GitHub Actions erfolgreich (grüner Haken)
+
+================================================================================
+SUPPORT
+================================================================================
+
+Bei Problemen:
+- GitHub Actions Logs prüfen
+- DNS Propagation: https://dnschecker.org
+- GitHub Pages Status: Repository → Settings → Pages
+
+================================================================================

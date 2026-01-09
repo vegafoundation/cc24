@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Output-Konfiguration für Multi-Deployment
-  output: process.env.DOCKER_BUILD === 'true' 
-    ? 'standalone' 
-    : (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true' ? 'export' : undefined),
+  output: 'export', // Static export für GitHub Pages
   images: {
-    unoptimized: process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true',
+    unoptimized: true, // Für GitHub Pages notwendig
     domains: [
       'localhost',
       'carcompany24-gmbh.de',
@@ -14,30 +11,49 @@ const nextConfig = {
       'cc24.vip',
       'www.cc24.online',
       'www.cc24.vip',
-      'images.unsplash.com',
-      'suchen.mobile.de',
-      'api.mobile.de',
       'github.com',
       'raw.githubusercontent.com',
-    ],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
+      '[USERNAME].github.io'
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  experimental: {
+    optimizeCss: true,
+  },
+  // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  // GitHub Pages basePath (nur wenn gesetzt)
-  ...(process.env.NEXT_PUBLIC_BASE_PATH && {
-    basePath: process.env.NEXT_PUBLIC_BASE_PATH,
-    assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH,
-    trailingSlash: true,
-  }),
+  // GitHub Pages basePath (optional, wenn im Subfolder)
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  // Trailing slash für GitHub Pages
+  trailingSlash: true,
+  // Multi-Domain Support
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Domain',
+            value: process.env.NEXT_PUBLIC_DOMAIN || 'local',
+          },
+        ],
+      },
+    ]
+  },
+  // Redirects
+  async redirects() {
+    return [
+      {
+        source: '/home',
+        destination: '/',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

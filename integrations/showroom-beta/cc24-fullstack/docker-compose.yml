@@ -1,0 +1,102 @@
+# CC24 Virtual Showroom - Docker Compose
+# Komplettes Fullstack Setup
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # FRONTEND - React/Vite
+  # ==========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  # ==========================================================================
+  # BACKEND - Node.js/Express API
+  # ==========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - ML_WORKER_URL=http://ml-worker:8001
+      - UPLOAD_DIR=/data/uploads
+      - PROCESSED_DIR=/data/processed
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - cc24_uploads:/data/uploads
+      - cc24_processed:/data/processed
+
+  # ==========================================================================
+  # ML WORKER - Python/FastAPI/Rembg
+  # ==========================================================================
+  ml-worker:
+    build:
+      context: ./ml-worker
+      dockerfile: ../docker/Dockerfile.ml-worker
+    ports:
+      - "8001:8001"
+    environment:
+      - PROCESSED_DIR=/data/processed
+    volumes:
+      - cc24_uploads:/data/uploads:ro
+      - cc24_processed:/data/processed
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ==========================================================================
+  # REDIS - Job Queue
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - cc24_redis:/data
+    command: redis-server --appendonly yes
+
+  # ==========================================================================
+  # NGINX - Reverse Proxy (Production)
+  # ==========================================================================
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - frontend
+  #     - backend
+
+volumes:
+  cc24_uploads:
+  cc24_processed:
+  cc24_redis:
+
+networks:
+  default:
+    name: cc24_network
