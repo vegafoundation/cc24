@@ -1,0 +1,174 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: cc24-deploy-
+  labels:
+    app: cc24
+    component: deployment
+spec:
+  entrypoint: deploy-cc24
+  arguments:
+    parameters:
+    - name: branch
+      value: main
+    - name: environment
+      value: production
+    - name: skip-docker
+      value: "false"
+    - name: skip-vercel
+      value: "false"
+  
+  templates:
+  # Main Workflow
+  - name: deploy-cc24
+    steps:
+    # Step 1: Build Next.js
+    - - name: build-nextjs
+        template: build-nextjs
+        arguments:
+          parameters:
+          - name: branch
+            value: "{{workflow.parameters.branch}}"
+          - name: environment
+            value: "{{workflow.parameters.environment}}"
+    
+    # Step 2: Parallel Deployments
+    - - name: deploy-github-pages
+        template: deploy-github-pages
+        arguments:
+          parameters:
+          - name: branch
+            value: "{{workflow.parameters.branch}}"
+      - name: deploy-vercel
+        template: deploy-vercel
+        when: "{{workflow.parameters.skip-vercel}} == false"
+        arguments:
+          parameters:
+          - name: branch
+            value: "{{workflow.parameters.branch}}"
+          - name: environment
+            value: "{{workflow.parameters.environment}}"
+      - name: build-docker
+        template: build-docker
+        when: "{{workflow.parameters.skip-docker}} == false"
+        arguments:
+          parameters:
+          - name: branch
+            value: "{{workflow.parameters.branch}}"
+          - name: tag
+            value: "{{workflow.parameters.environment}}"
+    
+    # Step 3: Health Checks
+    - - name: health-checks
+        template: health-checks
+        arguments:
+          parameters:
+          - name: github-pages-url
+            value: "https://vegafoundation.github.io/cc24/"
+          - name: vercel-url
+            value: "https://cc24.vercel.app"
+
+  # Build Next.js Template
+  - name: build-nextjs
+    inputs:
+      parameters:
+      - name: branch
+      - name: environment
+    container:
+      image: node:20-alpine
+      command: [sh, -c]
+      args:
+      - |
+        echo "Building Next.js for {{inputs.parameters.branch}}..."
+        npm install --no-audit
+        NEXT_PUBLIC_DOMAIN={{inputs.parameters.environment}} \
+        NEXT_PUBLIC_STATIC_EXPORT=true \
+        NODE_ENV=production \
+        npm run build:static
+        echo "Build complete!"
+      volumeMounts:
+      - name: workspace
+        mountPath: /workspace
+    volumes:
+    - name: workspace
+      persistentVolumeClaim:
+        claimName: cc24-workspace
+
+  # Deploy GitHub Pages Template
+  - name: deploy-github-pages
+    inputs:
+      parameters:
+      - name: branch
+    container:
+      image: alpine/git:latest
+      command: [sh, -c]
+      args:
+      - |
+        echo "Deploying to GitHub Pages..."
+        git config --global user.name "CC24 Deploy Bot"
+        git config --global user.email "deploy@cc24.local"
+        git push origin {{inputs.parameters.branch}}
+        echo "GitHub Pages deployment triggered!"
+
+  # Deploy Vercel Template
+  - name: deploy-vercel
+    inputs:
+      parameters:
+      - name: branch
+      - name: environment
+    container:
+      image: node:20-alpine
+      command: [sh, -c]
+      args:
+      - |
+        echo "Deploying to Vercel..."
+        npm install -g vercel
+        vercel --prod --yes --token $VERCEL_TOKEN
+        echo "Vercel deployment complete!"
+      env:
+      - name: VERCEL_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: vercel-secrets
+            key: token
+
+  # Build Docker Template
+  - name: build-docker
+    inputs:
+      parameters:
+      - name: branch
+      - name: tag
+    container:
+      image: docker:latest
+      command: [sh, -c]
+      args:
+      - |
+        echo "Building Docker image..."
+        docker build -t ghcr.io/vegafoundation/cc24/cc24-demo:{{inputs.parameters.tag}} .
+        echo "$GITHUB_TOKEN" | docker login ghcr.io -u USERNAME --password-stdin
+        docker push ghcr.io/vegafoundation/cc24/cc24-demo:{{inputs.parameters.tag}}
+        echo "Docker image pushed!"
+      env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-secrets
+            key: token
+
+  # Health Checks Template
+  - name: health-checks
+    inputs:
+      parameters:
+      - name: github-pages-url
+      - name: vercel-url
+    container:
+      image: curlimages/curl:latest
+      command: [sh, -c]
+      args:
+      - |
+        echo "Running health checks..."
+        echo "Checking GitHub Pages: {{inputs.parameters.github-pages-url}}"
+        curl -f {{inputs.parameters.github-pages-url}} || exit 1
+        echo "Checking Vercel: {{inputs.parameters.vercel-url}}"
+        curl -f {{inputs.parameters.vercel-url}} || exit 1
+        echo "All health checks passed!"
