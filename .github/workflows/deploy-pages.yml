@@ -37,7 +37,7 @@ jobs:
             npm install --no-audit
           fi
 
-      - name: Build for GitHub Pages
+      - name: Build for GitHub Pages (Static Export)
         run: npm run build:static
         env:
           NEXT_PUBLIC_DOMAIN: online
@@ -45,6 +45,17 @@ jobs:
           NEXT_PUBLIC_STATIC_EXPORT: "true"
           NEXT_PUBLIC_BASE_PATH: ""
           NODE_ENV: production
+          DOCKER_BUILD: "false"
+
+      - name: Verify build output
+        run: |
+          if [ -d "out" ]; then
+            echo "✅ Static export (out/) found"
+            ls -la out/ | head -20
+          else
+            echo "❌ No build output found!"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

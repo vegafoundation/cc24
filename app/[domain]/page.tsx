@@ -14,6 +14,15 @@ type Props = {
   }
 }
 
+// Für static export (GitHub Pages)
+export async function generateStaticParams() {
+  return [
+    { domain: 'online' },
+    { domain: 'vip' },
+    { domain: 'local' },
+  ]
+}
+
 export async function generateMetadata(props: Props) {
   const domain = props.params?.domain || 'local'
   const domainType = domain === 'online' ? 'online' : domain === 'vip' ? 'vip' : 'local'
