@@ -1,8 +1,9 @@
 /**
  * API Client for CarCompany24 Backend
- * Handles all API calls to the backend
+ * Handles all API calls to the backend with fallback to mock data
  */
 import axios from 'axios'
+import { getMockVehicles, getMockVehicle } from './mockData'
 
 // API URL: Use environment variable or default to production API
 // For GitHub Pages, use production API URL
@@ -11,11 +12,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
     ? 'https://cc24-api.vercel.app' // Production API URL for GitHub Pages
     : 'http://localhost:8000') // Local development
 
+// Flag to enable/disable mock data fallback
+const USE_MOCK_FALLBACK = process.env.NEXT_PUBLIC_USE_MOCK_FALLBACK !== 'false'
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 5000, // 5 second timeout
 })
 
 export interface Vehicle {
@@ -54,7 +59,7 @@ export interface SyncStatus {
 
 export const vehicleApi = {
   /**
-   * Get all vehicles
+   * Get all vehicles with fallback to mock data
    */
   async getVehicles(params?: {
     limit?: number
@@ -63,32 +68,58 @@ export const vehicleApi = {
     min_price?: number
     max_price?: number
   }): Promise<Vehicle[]> {
-    const response = await api.get<Vehicle[]>('/api/vehicles', { params })
-    return response.data
+    try {
+      const response = await api.get<Vehicle[]>('/api/vehicles', { params })
+      return response.data
+    } catch (error) {
+      if (USE_MOCK_FALLBACK) {
+        console.warn('API unavailable, using mock data:', error)
+        return getMockVehicles(params)
+      }
+      throw error
+    }
   },
 
   /**
-   * Get vehicle by ID
+   * Get vehicle by ID with fallback to mock data
    */
   async getVehicle(id: number): Promise<Vehicle> {
-    const response = await api.get<Vehicle>(`/api/vehicles/${id}`)
-    return response.data
+    try {
+      const response = await api.get<Vehicle>(`/api/vehicles/${id}`)
+      return response.data
+    } catch (error) {
+      if (USE_MOCK_FALLBACK) {
+        console.warn('API unavailable, using mock data:', error)
+        const vehicle = getMockVehicle(id)
+        if (vehicle) return vehicle
+        throw new Error(`Vehicle ${id} not found in mock data`)
+      }
+      throw error
+    }
   },
 
   /**
-   * Sync vehicles from Mobile.de
+   * Sync vehicles from Mobile.de (not available with mock data)
    */
   async syncMobileDe(params?: {
     make?: string
     model?: string
     limit?: number
   }): Promise<{ message: string }> {
-    const response = await api.post('/api/sync/mobile-de', params)
-    return response.data
+    try {
+      const response = await api.post('/api/sync/mobile-de', params)
+      return response.data
+    } catch (error) {
+      if (USE_MOCK_FALLBACK) {
+        console.warn('API unavailable, sync not possible with mock data')
+        throw new Error('Sync functionality requires API connection')
+      }
+      throw error
+    }
   },
 
   /**
-   * Sync vehicles from Mobile.de (synchronous)
+   * Sync vehicles from Mobile.de (synchronous) - not available with mock data
    */
   async syncMobileDeNow(params?: {
     make?: string
@@ -100,16 +131,37 @@ export const vehicleApi = {
     created: number
     updated: number
   }> {
-    const response = await api.post('/api/sync/mobile-de/sync-now', params)
-    return response.data
+    try {
+      const response = await api.post('/api/sync/mobile-de/sync-now', params)
+      return response.data
+    } catch (error) {
+      if (USE_MOCK_FALLBACK) {
+        console.warn('API unavailable, sync not possible with mock data')
+        throw new Error('Sync functionality requires API connection')
+      }
+      throw error
+    }
   },
 
   /**
-   * Get sync status
+   * Get sync status with fallback
    */
   async getSyncStatus(): Promise<SyncStatus> {
-    const response = await api.get<SyncStatus>('/api/sync/status')
-    return response.data
+    try {
+      const response = await api.get<SyncStatus>('/api/sync/status')
+      return response.data
+    } catch (error) {
+      if (USE_MOCK_FALLBACK) {
+        console.warn('API unavailable, returning mock sync status')
+        return {
+          total_vehicles: 6,
+          active_vehicles: 6,
+          synced_vehicles: 6,
+          last_sync: new Date().toISOString(),
+        }
+      }
+      throw error
+    }
   },
 }
 
